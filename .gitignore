@@ -1,0 +1,138 @@
+# Local OS/editor state
+.DS_Store
+.AppleDouble
+._*
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.user
+*.swp
+*.swo
+*~
+
+# Local environment and signing material; retain shareable templates
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.sample
+!.env.template
+*.local
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+.certs/
+
+# Installed dependencies and generated caches
+node_modules/
+.gomodcache/
+.gopath/
+.tools/
+.task/
+.pydeps/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.cache/
+.vite/
+.turbo/
+.parcel-cache/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Logs and temporary files
+logs/
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Compiled packages; source manifests, icons and build recipes stay visible
+*.dmg
+*.exe
+*.msi
+*.msix
+*.deb
+*.rpm
+*.AppImage
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.syso
+*.o
+*.obj
+*.test
+*.app/
+
+# Private application data
+.data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+
+# Generated web outputs (do not ignore build/ source directories)
+dist/
+dist-ssr/
+
+# Android/Xcode caches, SDK paths and generated native outputs
+.gradle/
+.kotlin/
+.cxx/
+.externalNativeBuild/
+local.properties
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Local design review captures; canonical design.json remains source
+.impeccable/review/
+.impeccable/*.local.json
+
+# Project-local desktop outputs
+/desktop/bin/*
+/desktop/.data/
+!/desktop/bin/.gitkeep
+/desktop/build/bin/
+/desktop/build/darwin/Assets.car
+/desktop/build/linux/appimage/build/
+/desktop/build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+/desktop/build/ios/xcode/overlay.json
+/desktop/build/ios/xcode/gen/
+/desktop/build/android/overlay.json
+/desktop/build/android/gen/
+/desktop/frontend/bindings/**/index.js
+/desktop/frontend/node_modules/
+
+# Upload packages copied to the root are release assets, not Git source
+/kopiq-*.zip
+/kopiq-*.tar.gz
+/SHA256SUMS*.txt
+/UPLOADS.md
+
+# Preserve the existing choice to keep planning/mockups local.
+# The canonical icon is required by desktop/build/Taskfile.yml.
+/checklist.md
+/docs/
+/design/
+/design/*
+!/design/icon.png

@@ -1,0 +1,54 @@
+# This file contains the configuration for this project.
+# When you update `info` or `fileAssociations`, run `wails3 task common:update:build-assets` to update the assets.
+version: '3'
+
+info:
+  companyName: "Kopiq"
+  productName: "Kopiq"
+  productIdentifier: "app.kopiq.desktop"
+  description: "Local-first clipboard manager for developers"
+  copyright: "(c) 2026, Kopiq"
+  comments: "Copy · Organize · Transform · Anywhere"
+  version: "0.1.0"
+
+# Dev mode: Go file changes rebuild the app; Vite serves the UI with HMR.
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 800
+  ignore:
+    dir:
+      - .git
+      - node_modules
+      - frontend
+      - bin
+      - .gomodcache
+      - .gopath
+      - .tools
+      - .data
+    file:
+      - .DS_Store
+      - .gitignore
+      - .gitkeep
+      - .env
+      - "*_test.go"
+    watched_extension:
+      - "*.go"
+      - "*.js"
+      - "*.ts"
+    git_ignore: true
+  executes:
+    - cmd: ./bin/wails3 build DEV=true
+      type: blocking
+    - cmd: ./bin/wails3 task common:dev:frontend
+      type: background
+      readiness:
+        # Match Vite host (127.0.0.1). Wails proxy forces tcp4; ::1-only binds blank the UI.
+        http: "http://127.0.0.1:9245/"
+        timeout: "90s"
+        interval: "250ms"
+    - cmd: ./bin/wails3 task run
+      type: primary
+      exit_policy: shutdown
+
+fileAssociations: []

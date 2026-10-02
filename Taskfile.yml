@@ -1,0 +1,188 @@
+version: "3"
+
+dotenv: [".env"]
+
+vars:
+  APP_NAME: "kopiq"
+  BIN_DIR: "bin"
+  PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "npm"}}'
+  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+  GOOS: '{{.GOOS | default OS}}'
+  # Bundled CLI (built into desktop/bin — do not rely on a global install)
+  WAILS3: "{{.ROOT_DIR}}/bin/wails3"
+
+env:
+  CGO_ENABLED: "1"
+  GOSUMDB: "off"
+  GOMODCACHE: "{{.ROOT_DIR}}/.gomodcache"
+  GOPATH: "{{.ROOT_DIR}}/.gopath"
+  # Always under desktop/ so clipboard history stays with the app during HMR.
+  KOPIQ_DATA_DIR: "{{.ROOT_DIR}}/.data"
+  WAILS_VITE_PORT: "{{.VITE_PORT}}"
+  # Prepend project bin so nested `wails3` / `task` calls from config.yml resolve.
+  PATH: '{{.ROOT_DIR}}/bin:{{env "PATH"}}'
+
+includes:
+  common: ./build/Taskfile.yml
+  windows: ./build/windows/Taskfile.yml
+  darwin: ./build/darwin/Taskfile.yml
+  linux: ./build/linux/Taskfile.yml
+  ios: ./build/ios/Taskfile.yml
+  android: ./build/android/Taskfile.yml
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  setup:
+    desc: Install frontend deps, generate bindings, ensure icons + dist stub
+    cmds:
+      - mkdir -p "{{.BIN_DIR}}" .data .gomodcache .gopath
+      - task: "common:install:frontend:deps"
+      - task: bindings
+      - task: "common:generate:icons"
+      - task: "ensure:dist"
+      - cmd: echo "Setup complete. Run task dev"
+
+  ensure:dist:
+    internal: true
+    cmds:
+      - bash scripts/ensure-dist.sh
+
+  bindings:
+    desc: Regenerate Wails TypeScript bindings from Go services
+    cmds:
+      - task: "common:generate:bindings"
+        vars:
+          BUILD_FLAGS: ""
+          OBFUSCATED: "false"
+      - cmd: bash scripts/write-bindings-index.sh
+
+  # ── Primary day-to-day workflow ──────────────────────────────────────────
+  dev:
+    desc: Desktop app with HMR (Go rebuild on .go changes, Vite HMR for UI)
+    summary: |
+      Opens the real Kopiq desktop window against the Vite dev server.
+      UI edits hot-reload. Go edits trigger a rebuild + app restart.
+      Data dir defaults to ./.data (see .env).
+    deps:
+      - "setup:ensure"
+    preconditions:
+      - sh: test -x "{{.ROOT_DIR}}/bin/wails3"
+        msg: "Missing desktop/bin/wails3. From desktop/: go build -o bin/wails3 github.com/wailsapp/wails/v3/cmd/wails3  (or copy the binary into bin/)"
+    cmds:
+      - cmd: '"{{.WAILS3}}" dev -config ./build/config.yml -port {{.VITE_PORT}}'
+
+  setup:ensure:
+    internal: true
+    cmds:
+      - mkdir -p "{{.BIN_DIR}}" .data .gomodcache .gopath
+      - bash scripts/ensure-dist.sh
+      - |
+        if [ ! -d frontend/node_modules ]; then
+          task "common:install:frontend:deps"
+        fi
+      - |
+        if [ ! -f build/darwin/icons.icns ]; then
+          task "common:generate:icons" || true
+        fi
+
+  ui:
+    desc: Frontend-only Vite preview (browser, demo data) — no Go / tray
+    cmds:
+      - task: "common:dev:frontend"
+
+  # ── Build / run without HMR ──────────────────────────────────────────────
+  build:
+    desc: Interactive production build (pick macOS / Windows / Linux / all)
+    summary: |
+      Opens a terminal menu:
+        1) macOS  2) Windows  3) macOS+Windows  4) Linux  5) All  6) This machine  7) Cancel
+      Non-interactive / CI: PLATFORM=darwin|windows|linux|macos-windows|all task build
+      Direct: task build:macos | build:windows | build:linux | build:all
+    interactive: true
+    cmds:
+      - bash scripts/build-interactive.sh
+
+  build:macos:
+    desc: Production build for macOS
+    cmds:
+      - PLATFORM=darwin bash scripts/build-interactive.sh
+
+  build:windows:
+    desc: Production build for Windows
+    cmds:
+      - PLATFORM=windows bash scripts/build-interactive.sh
+
+  build:linux:
+    desc: Production build for Linux (native on Linux, Docker cross-compile elsewhere)
+    cmds:
+      - PLATFORM=linux bash scripts/build-interactive.sh
+
+  build:all:
+    desc: Production build for macOS + Windows + Linux
+    cmds:
+      - PLATFORM=all bash scripts/build-interactive.sh
+
+  build:dev:
+    desc: Dev-tagged binary (no HMR server; embeds frontend/dist)
+    cmds:
+      - task: "{{.GOOS}}:build"
+        vars:
+          DEV: "true"
+
+  run:
+    desc: Run the last built binary (production-style, embedded assets)
+    cmds:
+      - task: "{{.GOOS}}:run"
+
+  package:
+    desc: Package a production build (.app on macOS)
+    cmds:
+      - task: "{{.GOOS}}:package"
+
+  package:dmg:
+    desc: Package a styled .dmg (macOS only)
+    platforms: [darwin]
+    cmds:
+      - task: darwin:package:dmg
+
+  # ── Housekeeping ─────────────────────────────────────────────────────────
+  reset:data:
+    desc: Wipe local clipboard DB/blobs under KOPIQ_DATA_DIR (default .data)
+    cmds:
+      - cmd: echo "Clearing {{.KOPIQ_DATA_DIR}} ..."
+      - cmd: rm -rf "{{.KOPIQ_DATA_DIR}}"
+      - cmd: mkdir -p "{{.KOPIQ_DATA_DIR}}"
+      - cmd: echo "Done. Next launch will re-seed demo items if the DB is empty."
+
+  tidy:
+    desc: go mod tidy
+    cmds:
+      - task: "common:go:mod:tidy"
+
+  install:msix:tools:
+    cmds:
+      - task: "windows:install:msix:tools"
+
+  setup:docker:
+    cmds:
+      - task: "common:setup:docker"
+
+  build:server:
+    cmds:
+      - task: "common:build:server"
+
+  run:server:
+    cmds:
+      - task: "common:run:server"
+
+  build:docker:
+    cmds:
+      - task: "common:build:docker"
+
+  run:docker:
+    cmds:
+      - task: "common:run:docker"
